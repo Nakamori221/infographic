@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>インタラクティブ暗号資産分析レポート (2025年5月16日～22日)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Application Structure Plan: 
+        The SPA is structured into logical, thematic sections to enhance usability and information discovery, rather than mirroring the report's linear chapter flow.
+        1. Header: Title and date range for context.
+        2. Navigation Bar (Sticky): Provides quick access to key sections: Overview, Top-Tier Tokens, Mid-Tier Tokens, Market Trends, and Conclusion. This allows users to jump to areas of interest easily.
+        3. Overview Section: 
+            - Brief introduction to the report's scope.
+            - Interactive "Key Findings Dashboard": A grid of clickable cards, one for each of the 6 tokens. Each card shows the token name, key news headline, and a brief impact summary. Clicking a card smoothly scrolls to the detailed analysis for that token. This provides a quick, high-level summary and entry points for deeper dives.
+        4. Token Deep Dive Sections (Combined and Filterable/Tabbed):
+            - A unified section for all tokens, potentially using tabs or filter buttons ("All", "Top-Tier", "Mid-Tier") to switch views.
+            - For each token:
+                - Token name, symbol, and a relevant Unicode icon.
+                - Key news headline and date.
+                - Collapsible/expandable sections for "Detailed Analysis", "Mid-to-Long Term Impact", and "Key Takeaways/Analyst Insights" to manage information density.
+                - A dedicated visual element (Chart.js donut chart for UNI & ZKJ; HTML/CSS diagrams or styled stat cards for LINK, AVAX, COW, SxT).
+            This structure allows users to either browse all tokens or focus on specific tiers, with detailed information accessible on demand.
+        5. Market Trends & Implications Section:
+            - Presents the four key market trends identified in the report (Institutional Involvement, Enterprise Adoption, DeFi Innovation/Challenges, Tokenomics) as a series of distinct, visually separated cards or content blocks. Each block will have an introductory text and relevant insights from the report.
+        6. Conclusion & Outlook Section:
+            - Summarizes the report's overall findings.
+            - Presents "Future Watch Points" for each token in a clear, bulleted list format.
+        7. Footer: Source attribution and copyright.
+        User Flow: Users can start with the overview dashboard for a quick summary, then click to explore specific tokens. The navigation bar allows non-linear exploration. Collapsible sections within token details prevent information overload. This design prioritizes quick understanding at a high level, with easy access to detailed information based on user interest.
+    -->
+    <!-- Visualization & Content Choices:
+        - Uniswap (UNI): 
+            - Report Info: Bancor lawsuit, market share (86%).
+            - Goal: Compare (market share), Inform (lawsuit impact).
+            - Viz: Donut Chart (Chart.js/Canvas) for 86% market share. Text for lawsuit.
+            - Interaction: Chart tooltip.
+            - Justification: Donut for clear proportion; text for nuanced legal info.
+        - Chainlink (LINK):
+            - Report Info: JPMorgan settlement via CCIP.
+            - Goal: Organize/Inform (JPM-Chainlink-RWA relationship).
+            - Viz: HTML/CSS diagram (boxes & arrows using Tailwind) showing JPM -> Chainlink (CCIP) -> Tokenized Treasuries.
+            - Interaction: Static visual with explanatory text.
+            - Justification: Visual flow for a complex partnership.
+        - Avalanche (AVAX):
+            - Report Info: VanEck fund, +4.3% price.
+            - Goal: Inform (fund impact, price change).
+            - Viz: Styled HTML card (Tailwind) highlighting fund details and "+4.3%" stat.
+            - Interaction: Static visual.
+            - Justification: Key stats are impactful as clear text.
+        - CoW Protocol (COW):
+            - Report Info: New FCA mechanism and its benefits.
+            - Goal: Organize/Inform (FCA benefits).
+            - Viz: HTML/CSS diagram (central "FCA" box with arrows to benefit boxes: efficiency, MEV resistance, UX).
+            - Interaction: Static visual.
+            - Justification: Clear visual breakdown of benefits.
+        - Polyhedra Network (ZKJ):
+            - Report Info: Token unlock details (15.5M ZKJ, distribution percentages).
+            - Goal: Compare (unlock distribution).
+            - Viz: Donut Chart (Chart.js/Canvas) for unlock allocation (Ecosystem, Community, Foundation, Pre-TGE).
+            - Interaction: Chart tooltip.
+            - Justification: Donut for proportional data.
+        - Space and Time (SxT):
+            - Report Info: Microsoft Fabric integration, +35% price.
+            - Goal: Inform (integration impact, price change).
+            - Viz: Styled HTML card (Tailwind) highlighting Microsoft partnership (text/Unicode icon) and "+35%" stat.
+            - Interaction: Static visual.
+            - Justification: Partnership and key stat are impactful.
+        - General: All charts Chart.js/Canvas. Diagrams via HTML/CSS/Tailwind. No SVG/Mermaid. Interactive elements include navigation, clickable cards in overview, and collapsible text sections for detailed token info.
+    -->
+    <style>
+        body { font-family: 'Noto Sans JP', sans-serif; background-color: #FDFBF7; color: #3D3B30; }
+        .sticky-nav { position: sticky; top: 0; z-index: 50; background-color: rgba(253, 251, 247, 0.85); backdrop-filter: blur(10px); }
+        .chart-container { position: relative; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto; height: 280px; max-height: 350px; }
+        @media (min-width: 768px) { .chart-container { height: 300px; max-width: 450px;} }
+        .token-card { background-color: #FFFFFF; border: 1px solid #E0D6C3; transition: all 0.3s ease-in-out; }
+        .token-card:hover { box-shadow: 0 10px 15px -3px rgba(160, 138, 126, 0.2), 0 4px 6px -2px rgba(160, 138, 126, 0.1); transform: translateY(-5px); }
+        .section-title { color: #A08A7E; border-bottom: 2px solid #C4B7A6; padding-bottom: 0.5rem; }
+        .content-block { background-color: #FFFFFF; border-radius: 8px; padding: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .tab-button { background-color: #C4B7A6; color: #3D3B30; }
+        .tab-button.active { background-color: #A08A7E; color: #FDFBF7; }
+        .collapsible-header { cursor: pointer; background-color: #E0D6C3; color: #3D3B30; padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; }
+        .collapsible-content { display: none; padding: 1rem; border: 1px solid #E0D6C3; border-top: none; border-radius: 0 0 4px 4px; background-color: #FDFBF7; }
+        .arrow-down::after { content: ' ▼'; font-size: 0.8em; }
+        .arrow-up::after { content: ' ▲'; font-size: 0.8em; }
+        .key-stat { color: #8D7A6E; font-weight: bold; font-size: 1.5rem; }
+    </style>
+</head>
+<body>
+
+    <header class="bg-[#A08A7E] text-[#FDFBF7] py-8 text-center">
+        <h1 class="text-4xl font-bold">インタラクティブ暗号資産分析レポート</h1>
+        <p class="text-lg">2025年5月16日 – 2025年5月22日</p>
+    </header>
+
+    <nav id="mainNav" class="sticky-nav shadow-md">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-center space-x-4 md:space-x-8 py-3 text-sm md:text-base">
+                <a href="#overview" class="nav-link hover:text-[#A08A7E] transition-colors">概要</a>
+                <a href="#tokenDetails" class="nav-link hover:text-[#A08A7E] transition-colors">個別分析</a>
+                <a href="#marketTrends" class="nav-link hover:text-[#A08A7E] transition-colors">市場トレンド</a>
+                <a href="#conclusion" class="nav-link hover:text-[#A08A7E] transition-colors">結論</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 md:p-8">
+        <section id="overview" class="py-8">
+            <h2 class="text-3xl font-semibold mb-6 section-title">レポート概要</h2>
+            <div class="content-block mb-8">
+                <p class="mb-4">本インタラクティブレポートは、2025年5月16日から5月22日までの期間に公表された主要6暗号資産（Uniswap, Chainlink, Avalanche, CoW Protocol, Polyhedra Network, Space and Time）に関する重要なファンダメンタルズニュースを分析し、それらが各トークン価格に及ぼす中長期的影響を視覚的に解説します。</p>
+                <p>以下のカードをクリックすると、各暗号資産の詳細分析セクションへ移動します。</p>
+            </div>
+
+            <h3 class="text-2xl font-semibold mb-4 text-[#A08A7E]">主要な発見事項ダッシュボード</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+        </section>
+
+        <section id="tokenDetails" class="py-8">
+            <h2 class="text-3xl font-semibold mb-6 section-title">個別銘柄 詳細分析</h2>
+            <div class="content-block mb-8">
+                <p>ここでは、各暗号資産に関する詳細なファンダメンタルズ分析、中長期的な影響、そして主要なポイントを確認できます。下のタブで表示する銘柄群を切り替えられます。各項目のタイトルをクリックすると詳細内容が展開/折り畳みされます。</p>
+                 <div class="mb-4 flex space-x-2" id="tokenFilterControls">
+                    <button data-filter="all" class="tab-button active px-4 py-2 rounded-md text-sm font-medium">全銘柄</button>
+                    <button data-filter="top" class="tab-button px-4 py-2 rounded-md text-sm font-medium">トップ銘柄</button>
+                    <button data-filter="mid" class="tab-button px-4 py-2 rounded-md text-sm font-medium">中堅銘柄</button>
+                </div>
+            </div>
+            <div id="tokenDetailCardsContainer" class="space-y-8">
+                </div>
+        </section>
+
+        <section id="marketTrends" class="py-8">
+            <h2 class="text-3xl font-semibold mb-6 section-title">市場トレンドと総括的考察</h2>
+            <div class="content-block mb-8">
+                <p>調査期間中に観測された各銘柄のファンダメンタルズニュースは、個別のプロジェクト動向を超えて、暗号資産市場全体のいくつかの重要なトレンドを浮き彫りにしています。以下に主要な考察を示します。</p>
+            </div>
+            <div id="marketTrendsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                </div>
+        </section>
+
+        <section id="conclusion" class="py-8">
+            <h2 class="text-3xl font-semibold mb-6 section-title">結論と今後の展望</h2>
+            <div class="content-block">
+                <p class="mb-4">2025年5月16日から22日の期間において、本レポートで調査対象とした6銘柄すべてに関して、トークン価値に中長期的影響を与えうる重要ニュースが観測されました。機関投資家の関与深化、エンタープライズ連携、エコシステム拡大、技術革新といったポジティブな動きが目立つ一方、法的紛争やトークノミクス起因のリスクも確認されました。</p>
+                <p class="mb-2 font-semibold text-[#A08A7E]">期間中に見られた主要テーマ：</p>
+                <ul class="list-disc list-inside mb-4 pl-4 space-y-1">
+                    <li>RWA（実世界の資産）のトークン化と機関投資家によるDeFi活用</li>
+                    <li>エンタープライズソリューションとしてのブロックチェーン</li>
+                    <li>プロトコルレベルでの継続的イノベーション</li>
+                    <li>市場の成熟に伴う課題（法的整備、トークノミクス管理）</li>
+                </ul>
+                <h4 class="text-xl font-semibold mt-6 mb-3 text-[#A08A7E]">今後の各銘柄に関する注目点：</h4>
+                <div id="futureOutlookContainer" class="space-y-2">
+                     </div>
+                <p class="mt-6">総じて、暗号資産市場は実用的な価値創造とファンダメンタルズに基づいた長期的成長がより重視される段階へと移行しつつあります。投資家は、ニュースの表面的内容だけでなく、広範な市場トレンドと各プロジェクトのファンダメンタルな強みや対応力を総合的に評価し、慎重な投資判断を行う必要があります。</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-[#3D3B30] text-[#FDFBF7] text-center p-6 mt-12">
+        <p>&copy; 2025 インタラクティブ暗号資産分析. All rights reserved.</p>
+        <p class="text-sm">情報源: 主要6暗号資産ファンダメンタルズ分析レポート（2025年5月16日～22日）</p>
+    </footer>
+
+<script>
+const reportData = {
+    tokens: [
+        { 
+            id: "uni", tier: "top", name: "Uniswap", symbol: "UNI", icon: "🦄",
+            keyNews: "Bancorによる特許侵害訴訟", newsDate: "2025/05/20",
+            overviewImpact: "訴訟長期化や不利な判決は競争力に影響リスク。プロトコルの優位性が鍵。",
+            detailedAnalysis: "競合プロトコルであるBancorからの特許侵害訴訟の提起。BancorはCPAMM技術の特許侵害を主張。Uniswap側は根拠がないと反論。UNI価格は一時6.31%上昇、30日間MVRV比率は10.05%に上昇。市場シェアはETH基盤DEX取引量の86％、トレーダーの97％獲得、累計取引高3兆ドル突破。EIP-7702への迅速対応などイノベーションも継続。",
+            midLongTermImpact: "訴訟が不利に進めば財務・評判・競争力に悪影響のリスク。勝訴や軽微な和解なら影響限定的。市場シェアやイノベーション力が維持されればファンダメンタルズは堅調。DeFiにおけるオープンソースと知的財産権の緊張関係を浮き彫りに。訴訟の行方によっては業界の法的枠組みや開発文化に影響の可能性も。",
+            keyTakeaways: ["短期的な市場反応は楽観的だが、訴訟の長期的帰結は不透明。", "圧倒的な市場シェアとユーザーベースが強み。", "DeFiにおける知的財産権問題の重要性が増す可能性。"],
+            visualData: { type: "donutChart", data: [86, 14], labels: ["Uniswap市場シェア", "その他DEX"], title: "ETH基盤DEX取引量シェア" }
+        },
+        { 
+            id: "link", tier: "top", name: "Chainlink", symbol: "LINK", icon: "🔗",
+            keyNews: "JPMorganがChainlink経由でトークン化米国債決済", newsDate: "2025/05/16",
+            overviewImpact: "RWAトークン化における中心的役割を強化。機関投資家の信頼を高め、需要増の可能性。",
+            detailedAnalysis: "金融大手JP Morgan Chaseが、Ondo FinanceのブロックチェーンとChainlinkのCCIPを活用し、トークン化米国債の決済を実行。伝統金融機関によるパブリックブロックチェーンとDeFiプロトコル利用の重要なマイルストーン。Swiftやブラジル中銀との連携実績もあり。",
+            midLongTermImpact: "機関投資家からの信頼向上、Chainlinkソリューションへの需要増が期待。RWA市場拡大に伴いLINKのユーティリティと価値向上。CCIPの採用拡大も見込まれる。DeFiと伝統金融の架け橋としての地位を確立。「ショベル売り」戦略の成功。業界標準としての地位確立の可能性。ただしMiCA改正案による手数料上限リスクも存在。",
+            keyTakeaways: ["機関投資家採用の強力な事例。", "RWAトークン化の基盤インフラとしての役割を確立。", "クロスチェーン相互運用性(CCIP)の有効性を証明。"],
+            visualData: { type: "htmlDiagram", title: "JPMorganとChainlinkの連携", content: "<div class='text-center p-4 border border-[#C4B7A6] rounded-lg'><p class='font-bold text-lg text-[#A08A7E]'>JPMorgan</p><p class='text-2xl my-2'>↕️ CCIP ↕️</p><p class='font-bold text-lg text-[#A08A7E]'>Chainlink</p><p class='text-2xl my-2'>↕️</p><p class='font-semibold'>トークン化米国債決済</p></div>" }
+        },
+        { 
+            id: "avax", tier: "top", name: "Avalanche", symbol: "AVAX", icon: "🏔️",
+            keyNews: "VanEckによるAvalancheエコシステム特化ファンド設立", newsDate: "2025/05/21",
+            overviewImpact: "エコシステムへの資金流入とプロジェクト育成を促進。AVAXのユースケース拡大と価値向上に期待。",
+            detailedAnalysis: "大手資産運用会社VanEckが「VanEck PurposeBuiltファンド」設立を発表（6月運用開始予定）。ゲーム、金融、AI分野などが対象。ファンド遊休資金はAvalanche上のRWAトークンに投入計画。AVAX価格は発表後4.3%上昇。",
+            midLongTermImpact: "Avalancheプラットフォームへの信頼性向上、エコシステムへの資金・人材流入促進。支援プロジェクト成功でAVAXのユースケース拡大と需要増。RWAプラットフォームとしての地位強化。ネットワーク価値向上とAVAX価格の中長期的上昇に貢献。機関投資家によるテーマ型エコシステム投資本格化の兆し。サブネットアーキテクチャの強みが活かされる可能性。",
+            keyTakeaways: ["著名な資産運用会社によるエコシステム特化型ファンド。", "AVAXのユースケース拡大とネットワーク価値向上への期待。", "サブネットアーキテクチャの魅力が機関投資家を惹きつける可能性。"],
+            visualData: { type: "statCard", title: "VanEckファンド設立の影響", items: [{label: "AVAX価格変動 (発表後)", value: "+4.3%", class: "text-green-600"}] }
+        },
+        { 
+            id: "cow", tier: "mid", name: "CoW Protocol", symbol: "COW", icon: "🐄",
+            keyNews: "新コアメカニズム「Fair Combinatorial Auction (FCA)」発表", newsDate: "2025/05/16",
+            overviewImpact: "取引効率、MEV耐性、UX向上に期待。成功裏の実装が競争力とトークン価値に貢献。",
+            detailedAnalysis: "従来のシングルバッチオークションからFCAへ移行（6月3日リリース予定）。複数注文を組合せ最適決済経路探索。CoinMarketCal AI分析では影響度7.5/10。Coingeckoデータでは5/21時点で7日間で9.2%下落、直近24hで6.6%上昇。",
+            midLongTermImpact: "FCAが期待通り機能すればDEXアグリゲーターとしての魅力向上、取引量増、COWトークン価値向上に期待。実装成功と市場浸透度が鍵。MEV耐性強化は戦略的差別化。リリース後の実績検証が重要。",
+            keyTakeaways: ["プロトコル根幹に関わる技術的進化。", "MEV耐性と取引効率向上が焦点。", "リリース後のパフォーマンスが価格動向を左右。"],
+            visualData: { type: "htmlDiagram", title: "FCAメカニズムのメリット", content: "<div class='text-sm text-center p-3 border border-[#C4B7A6] rounded-lg'><p class='font-bold text-lg text-[#A08A7E] mb-2'>FCA</p><div class='grid grid-cols-3 gap-2'><div class='p-2 bg-[#E0D6C3] rounded'>取引効率UP</div><div class='p-2 bg-[#E0D6C3] rounded'>MEV耐性強化</div><div class='p-2 bg-[#E0D6C3] rounded'>UX向上</div></div></div>" }
+        },
+        { 
+            id: "zkj", tier: "mid", name: "Polyhedra Network", symbol: "ZKJ", icon: "🔗",
+            keyNews: "大規模トークンアンロック", newsDate: "2025/05/19",
+            overviewImpact: "短期的には価格下落圧力。中長期的にはエコシステム開発への活用が成長を左右。",
+            detailedAnalysis: "1550万ZKJトークン（総供給量の1.55％、流通供給量の約5.02-5.30％、約3173万ドル相当）をアンロック。内訳はエコシステム/ネットワークインセンティブ(847万)、コミュニティ/マーケティング(261万)、財団リザーブ(361万)、プレTGE購入者(80万)。",
+            midLongTermImpact: "短期的には供給増による価格下落圧力。中長期的には、アンロックされたトークンがエコシステム成長に効果的に活用されればプラス。売却が続けば重石に。使途と市場消化能力、プロジェクト側の透明性と実行力が鍵。アンロックされたトークンの「質」と透明性が重要。",
+            keyTakeaways: ["トークノミクス上の重要イベント。", "短期的な売り圧力と中長期的な成長資金のバランス。", "プロジェクト側の透明性と実行力が試される。"],
+            visualData: { type: "donutChart", data: [54.6, 16.8, 23.3, 5.2], labels: ["エコシステム/ネットワーク", "コミュニティ/マーケティング", "財団リザーブ", "プレTGE購入者"], title: "ZKJトークンアンロック内訳 (%)" } // 847/1550, 261/1550 etc.
+        },
+        { 
+            id: "sxt", tier: "mid", name: "Space and Time", symbol: "SxT", icon: "⏱️",
+            keyNews: "Microsoft Fabricとの統合発表", newsDate: "2025/05/20",
+            overviewImpact: "大手採用で信頼性と市場認知度向上。エンタープライズ需要とトークンユーティリティ拡大期待。",
+            detailedAnalysis: "MicrosoftがSxTのブロックチェーンデータを自社の統合分析プラットフォームMicrosoft Fabricに統合。FabricユーザーはAzure OneLake経由で主要ブロックチェーンの検証可能データにアクセス可能に。「Proof of SQL」技術（ZK proofs活用）で検証。SxT価格は発表後一時35%以上急騰（0.146ドル）。",
+            midLongTermImpact: "Microsoft採用で技術とソリューションの信頼性飛躍的向上。エンタープライズ顧客への扉を開く。プラットフォーム利用拡大でSxTトークン需要増、価値向上。検証可能データ市場でのリーダーシップ確立の重要マイルストーン。AI開発やエンタープライズ分析でのブロックチェーンデータ活用が進めばSxTの重要性増。Proof of SQLは検証可能コンピューティングの試金石。Microsoftの広大な法人顧客基盤へのアクセス。",
+            keyTakeaways: ["大手テクノロジー企業との戦略的提携。", "「Proof of SQL」技術による検証可能データの提供。", "エンタープライズ市場へのブロックチェーン技術普及の可能性。"],
+            visualData: { type: "statCard", title: "Microsoft Fabric統合の影響", items: [{label: "SxT価格変動 (発表後)", value: "+35%以上", class: "text-green-600" }, {label: "提携企業", value: "Microsoft", class: "text-[#A08A7E]"}] }
+        }
+    ],
+    marketTrends: [
+        { title: "機関投資家の関与深化", icon: "🏛️", description: "Chainlink & JPMorgan、Avalanche & VanEckの事例は、機関投資家が技術ユースケースやエコシステム構築に積極的に関与し始めていることを示す。市場の成熟度を高め、RWAトークン化やDeFi実用化を加速させる可能性。" },
+        { title: "エンタープライズ活用本格化", icon: " ", description: "Space and Time & Microsoftの提携は、ブロックチェーン技術が実用的なビジネス価値を提供し始めていることを象徴。企業のデータ戦略の重要要素へ進化。サプライチェーン、金融、ヘルスケア等での応用期待。" },
+        { title: "DeFiにおけるイノベーションと法的課題", icon: "💡", description: "CoW ProtocolのFCA導入は継続的革新を示す一方、Uniswapの訴訟は知的財産権など法的課題の表面化を示唆。技術的優位性と法務戦略、コミュニティ支持が重要に。" },
+        { title: "トークノミクスの影響と市場心理", icon: "⚖️", description: "Polyhedra Networkのアンロックは、供給量が価格に与える影響と、エコシステム成長への貢献の重要性を再認識させる。透明性と市場との対話が不可欠。" }
+    ],
+    futureOutlook: {
+        uni: "Bancorとの特許侵害訴訟の具体的な進展と、それがUniswapの運営体制や市場シェアに与える実際の影響。",
+        link: "JP Morganとの連携実績のさらなる拡大、他の金融機関によるCCIPやデータフィードの採用状況、競合オラクルプロジェクトとの差別化戦略。",
+        avax: "VanEckによる「PurposeBuiltファンド」からの具体的な投資案件の発表とその成果、サブネットアーキテクチャのさらなる普及とユースケースの拡大。",
+        cow: "2025年6月3日にリリースが予定されているFCAメカニズムの実際のパフォーマンス、ユーザーからの評価、取引量の変化。",
+        zkj: "5月19日にアンロックされたZKJトークンの具体的な使途と、それがエコシステムの成長やコミュニティ活性化に与える影響、今後のアンロックスケジュールと市場へのコミュニケーション。",
+        sxt: "Microsoft Fabricとの統合後の具体的なエンタープライズ顧客の獲得状況、新たなユースケースの出現、競合データサービスとの競争。"
+    }
+};
+
+function createChart(ctx, type, data, options) {
+    return new Chart(ctx, { type, data, options });
+}
+
+function wrapLabel(str, maxWidth = 16) {
+    if (!str) return [''];
+    const words = String(str).split(' ');
+    let currentLine = '';
+    const lines = [];
+    for (const word of words) {
+        if ((currentLine + word).length > maxWidth && currentLine.length > 0) {
+            lines.push(currentLine.trim());
+            currentLine = '';
+        }
+        currentLine += word + ' ';
+    }
+    if (currentLine.trim().length > 0) {
+        lines.push(currentLine.trim());
+    }
+    return lines.length > 0 ? lines : [String(str)];
+}
+
+const chartTooltipTitleCallback = (tooltipItems) => {
+    const item = tooltipItems[0];
+    let label = item.chart.data.labels[item.dataIndex];
+    if (Array.isArray(label)) {
+      return label.join(' ');
+    }
+    return label;
+};
+
+const chartColors = ['#A08A7E', '#C4B7A6', '#8D7A6E', '#B0A190', '#D9CEC1'];
+
+document.addEventListener('DOMContentLoaded', () => {
+    const overviewContainer = document.querySelector('#overview .grid');
+    const tokenDetailCardsContainer = document.getElementById('tokenDetailCardsContainer');
+    const marketTrendsContainer = document.getElementById('marketTrendsContainer');
+    const futureOutlookContainer = document.getElementById('futureOutlookContainer');
+    const tokenFilterControls = document.getElementById('tokenFilterControls');
+
+    // Populate Overview Dashboard
+    reportData.tokens.forEach(token => {
+        const card = document.createElement('div');
+        card.className = 'token-card p-6 rounded-lg shadow-lg cursor-pointer';
+        card.setAttribute('data-token-id', token.id);
+        card.innerHTML = `
+            <div class="flex items-center mb-3">
+                <span class="text-3xl mr-3">${token.icon}</span>
+                <div>
+                    <h4 class="text-xl font-bold text-[#A08A7E]">${token.name} (${token.symbol})</h4>
+                    <p class="text-xs text-gray-500">${token.tier === 'top' ? 'トップ銘柄' : '中堅銘柄'}</p>
+                </div>
+            </div>
+            <p class="text-sm font-semibold text-[#3D3B30] mb-1">${token.keyNews}</p>
+            <p class="text-xs text-gray-500 mb-2">発表日: ${token.newsDate}</p>
+            <p class="text-sm text-gray-700">${token.overviewImpact}</p>
+        `;
+        card.addEventListener('click', () => {
+            document.getElementById(`detail-${token.id}`).scrollIntoView({ behavior: 'smooth' });
+            // Auto-expand the first collapsible section for the clicked token
+            const firstCollapsible = document.querySelector(`#detail-${token.id} .collapsible-header`);
+            if (firstCollapsible && !firstCollapsible.classList.contains('active')) {
+                 firstCollapsible.click();
+            }
+        });
+        overviewContainer.appendChild(card);
+    });
+
+    // Populate Token Detail Cards
+    function renderTokenDetails(filter = 'all') {
+        tokenDetailCardsContainer.innerHTML = ''; // Clear existing cards
+        const filteredTokens = reportData.tokens.filter(token => {
+            if (filter === 'all') return true;
+            return token.tier === filter;
+        });
+
+        filteredTokens.forEach(token => {
+            const detailCard = document.createElement('div');
+            detailCard.id = `detail-${token.id}`;
+            detailCard.className = 'content-block token-detail-item';
+            detailCard.setAttribute('data-tier', token.tier);
+            
+            let visualHtml = '';
+            if (token.visualData.type === 'donutChart') {
+                visualHtml = `<div class="chart-container my-4"><canvas id="chart-${token.id}"></canvas><p class="text-center text-xs text-gray-500 mt-1">${token.visualData.title || ''}</p></div>`;
+            } else if (token.visualData.type === 'htmlDiagram') {
+                visualHtml = `<div class="my-4 p-3 bg-[#FDFBF7] rounded-md">${token.visualData.content}</div>`;
+            } else if (token.visualData.type === 'statCard') {
+                let itemsHtml = token.visualData.items.map(item => `<div class="my-1"><span class="font-medium">${item.label}:</span> <span class="key-stat ${item.class || ''}">${item.value}</span></div>`).join('');
+                visualHtml = `<div class="my-4 p-4 bg-[#C4B7A6] bg-opacity-30 rounded-lg text-center"><h5 class="font-semibold text-[#A08A7E] mb-2">${token.visualData.title}</h5>${itemsHtml}</div>`;
+            }
+
+            detailCard.innerHTML = `
+                <div class="flex items-center mb-4">
+                    <span class="text-4xl mr-4">${token.icon}</span>
+                    <div>
+                        <h3 class="text-2xl font-bold text-[#A08A7E]">${token.name} (${token.symbol})</h3>
+                        <p class="text-sm text-gray-600">${token.keyNews} (${token.newsDate})</p>
+                    </div>
+                </div>
+                
+                <div class="collapsible-header">詳細分析<span class="arrow-down"></span></div>
+                <div class="collapsible-content"><p>${token.detailedAnalysis.replace(/\n/g, '<br>')}</p></div>
+
+                <div class="collapsible-header">中長期的影響<span class="arrow-down"></span></div>
+                <div class="collapsible-content"><p>${token.midLongTermImpact.replace(/\n/g, '<br>')}</p></div>
+
+                <div class="collapsible-header">主要ポイント<span class="arrow-down"></span></div>
+                <div class="collapsible-content">
+                    <ul class="list-disc list-inside space-y-1">${token.keyTakeaways.map(item => `<li>${item}</li>`).join('')}</ul>
+                </div>
+                
+                ${visualHtml}
+            `;
+            tokenDetailCardsContainer.appendChild(detailCard);
+
+            if (token.visualData.type === 'donutChart') {
+                const ctx = document.getElementById(`chart-${token.id}`).getContext('2d');
+                createChart(ctx, 'doughnut', {
+                    labels: token.visualData.labels.map(l => wrapLabel(l)),
+                    datasets: [{
+                        data: token.visualData.data,
+                        backgroundColor: chartColors.slice(0, token.visualData.data.length),
+                        borderColor: '#FDFBF7',
+                        borderWidth: 2
+                    }]
+                }, {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#3D3B30', font: {size: 10}, boxWidth: 15, padding: 10,
+                            generateLabels: function(chart) {
+                                const data = chart.data;
+                                if (data.labels.length && data.datasets.length) {
+                                    return data.labels.map(function(label, i) {
+                                        const meta = chart.getDatasetMeta(0);
+                                        const style = meta.controller.getStyle(i);
+                                        const labelString = Array.isArray(label) ? label.join(' ') : label;
+                                        return {
+                                            text: wrapLabel(labelString, 12).join('\n'),
+                                            fillStyle: style.backgroundColor,
+                                            strokeStyle: style.borderColor,
+                                            lineWidth: style.borderWidth,
+                                            hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                                            index: i
+                                        };
+                                    });
+                                }
+                                return [];
+                            }
+                         } },
+                        tooltip: { callbacks: { title: chartTooltipTitleCallback, label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) { label += ': '; }
+                            if (context.parsed !== null) { label += context.parsed + (token.visualData.title.includes('%') || token.id === 'zkj' ? '%' : ''); } // Add % for ZKJ chart
+                            return label;
+                        }}}
+                    }
+                });
+            }
+        });
+        
+        // Add collapsible functionality
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const content = header.nextElementSibling;
+                const arrow = header.querySelector('span');
+                header.classList.toggle('active');
+                if (content.style.display === 'block') {
+                    content.style.display = 'none';
+                    arrow.classList.remove('arrow-up');
+                    arrow.classList.add('arrow-down');
+                } else {
+                    content.style.display = 'block';
+                    arrow.classList.remove('arrow-down');
+                    arrow.classList.add('arrow-up');
+                }
+            });
+        });
+    }
+    renderTokenDetails(); // Initial render with all tokens
+
+    // Token filter controls
+    tokenFilterControls.addEventListener('click', (event) => {
+        if (event.target.tagName === 'BUTTON') {
+            document.querySelectorAll('#tokenFilterControls button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderTokenDetails(event.target.dataset.filter);
+        }
+    });
+
+
+    // Populate Market Trends
+    reportData.marketTrends.forEach(trend => {
+        const trendCard = document.createElement('div');
+        trendCard.className = 'content-block';
+        trendCard.innerHTML = `
+            <div class="flex items-center mb-3">
+                <span class="text-3xl mr-3">${trend.icon}</span>
+                <h4 class="text-xl font-semibold text-[#A08A7E]">${trend.title}</h4>
+            </div>
+            <p class="text-gray-700 text-sm">${trend.description}</p>
+        `;
+        marketTrendsContainer.appendChild(trendCard);
+    });
+
+    // Populate Future Outlook
+    Object.entries(reportData.futureOutlook).forEach(([tokenSymbol, outlook]) => {
+        const tokenData = reportData.tokens.find(t => t.id === tokenSymbol.toLowerCase());
+        if (tokenData) {
+            const outlookItem = document.createElement('div');
+            outlookItem.className = "p-3 bg-[#E0D6C3] bg-opacity-50 rounded";
+            outlookItem.innerHTML = `<p><strong class="text-[#8D7A6E]">${tokenData.name} (${tokenData.symbol}):</strong> ${outlook}</p>`;
+            futureOutlookContainer.appendChild(outlookItem);
+        }
+    });
+    
+    // Smooth scroll for nav links
+    document.querySelectorAll('a.nav-link').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href');
+            const targetElement = document.querySelector(targetId);
+            if (targetElement) {
+                 const offsetTop = targetElement.offsetTop - document.getElementById('mainNav').offsetHeight - 20; // Adjust for sticky nav and some padding
+                 window.scrollTo({ top: offsetTop, behavior: 'smooth' });
+            }
+        });
+    });
+});
+</script>
+</body>
+</html>
+ 
